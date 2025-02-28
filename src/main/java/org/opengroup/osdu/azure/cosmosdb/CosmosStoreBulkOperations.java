@@ -203,6 +203,8 @@ public class CosmosStoreBulkOperations {
 
                 if (status == HttpStatus.SC_TOO_MANY_REQUESTS) {
                     throw new AppException(HttpStatus.SC_TOO_MANY_REQUESTS, "Too Many Requests", "CosmosDB request limit reached!!!");
+                } else if (status == HttpStatus.SC_REQUEST_TOO_LONG) {
+                    throw new AppException(HttpStatus.SC_TOO_MANY_REQUESTS, "Request Too Long", "The document size in the request exceeded the allowable document size of 2 MB for a request!!");
                 } else {
                     throw new AppException(status, "Bulk operation : " + operation + " has failed!", "Failed to " + operation + " documents in CosmosDB");
                 }
