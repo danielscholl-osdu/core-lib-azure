@@ -188,7 +188,7 @@ public class CosmosStoreBulkOperations {
                             if ((exception instanceof CosmosException) && ((CosmosException) exception).getStatusCode() == HttpStatus.SC_TOO_MANY_REQUESTS) {
                                 throw new AppException(HttpStatus.SC_TOO_MANY_REQUESTS, "Too Many Requests", "CosmosDB request limit reached!", exception);
                             } else if ((exception instanceof CosmosException) && ((CosmosException) exception).getStatusCode() == HttpStatus.SC_REQUEST_TOO_LONG) {
-                                throw new AppException(HttpStatus.SC_REQUEST_TOO_LONG, "Request Too Long", "The document size in the request exceeded the allowable document size for a request!", exception);
+                                throw new AppException(HttpStatus.SC_REQUEST_TOO_LONG, "Request Too Long", "CosmosDB request size limit reached!", exception);
                             }
                         } else {
                             if (statusCode == HttpStatus.SC_TOO_MANY_REQUESTS) {
@@ -206,7 +206,7 @@ public class CosmosStoreBulkOperations {
                 if (status == HttpStatus.SC_TOO_MANY_REQUESTS) {
                     throw new AppException(HttpStatus.SC_TOO_MANY_REQUESTS, "Too Many Requests", "CosmosDB request limit reached!!!");
                 } else if (status == HttpStatus.SC_REQUEST_TOO_LONG) {
-                    throw new AppException(HttpStatus.SC_REQUEST_TOO_LONG, "Request Too Long", "The document size in the request exceeded the allowable document size for a request!");
+                    throw new AppException(HttpStatus.SC_REQUEST_TOO_LONG, "Request Too Long", "CosmosDB request size limit reached!");
                 } else {
                     throw new AppException(status, "Bulk operation : " + operation + " has failed!", "Failed to " + operation + " documents in CosmosDB");
                 }
