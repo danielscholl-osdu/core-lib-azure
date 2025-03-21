@@ -104,7 +104,6 @@ public class Slf4jMDCFilter implements Filter {
         return contextMap;
     }
 
-    
     /**
      * Get oid from Authorization payload (JWT token).
      *
