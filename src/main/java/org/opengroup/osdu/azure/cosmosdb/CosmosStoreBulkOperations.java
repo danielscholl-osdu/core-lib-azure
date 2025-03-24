@@ -36,6 +36,8 @@ import static org.opengroup.osdu.azure.logging.DependencyType.COSMOS_STORE;
 public class CosmosStoreBulkOperations {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CosmosStoreBulkOperations.class.getName());
+    private static final String REQUEST_TOO_LONG_ERROR_REASON = "Request Too Long";
+    private static final String REQUEST_TOO_LONG_ERROR_MESSAGE = "Metadata request size limit reached!";
 
     @Autowired
     private DependencyLogger dependencyLogger;
@@ -188,7 +190,7 @@ public class CosmosStoreBulkOperations {
                             if ((exception instanceof CosmosException) && ((CosmosException) exception).getStatusCode() == HttpStatus.SC_TOO_MANY_REQUESTS) {
                                 throw new AppException(HttpStatus.SC_TOO_MANY_REQUESTS, "Too Many Requests", "CosmosDB request limit reached!", exception);
                             } else if ((exception instanceof CosmosException) && ((CosmosException) exception).getStatusCode() == HttpStatus.SC_REQUEST_TOO_LONG) {
-                                throw new AppException(HttpStatus.SC_REQUEST_TOO_LONG, "Request Too Long", "Metadata request size limit reached!", exception);
+                                throw new AppException(HttpStatus.SC_REQUEST_TOO_LONG, REQUEST_TOO_LONG_ERROR_REASON, REQUEST_TOO_LONG_ERROR_MESSAGE, exception);
                             }
                         } else {
                             if (statusCode == HttpStatus.SC_TOO_MANY_REQUESTS) {
@@ -206,7 +208,7 @@ public class CosmosStoreBulkOperations {
                 if (status == HttpStatus.SC_TOO_MANY_REQUESTS) {
                     throw new AppException(HttpStatus.SC_TOO_MANY_REQUESTS, "Too Many Requests", "CosmosDB request limit reached!!!");
                 } else if (status == HttpStatus.SC_REQUEST_TOO_LONG) {
-                    throw new AppException(HttpStatus.SC_REQUEST_TOO_LONG, "Request Too Long", "Metadata request size limit reached!");
+                    throw new AppException(HttpStatus.SC_REQUEST_TOO_LONG, REQUEST_TOO_LONG_ERROR_REASON, REQUEST_TOO_LONG_ERROR_MESSAGE);
                 } else {
                     throw new AppException(status, "Bulk operation : " + operation + " has failed!", "Failed to " + operation + " documents in CosmosDB");
                 }
