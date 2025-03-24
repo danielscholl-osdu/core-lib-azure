@@ -37,6 +37,7 @@ public class CosmosStoreBulkOperations {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(CosmosStoreBulkOperations.class.getName());
     private static final String REQUEST_TOO_LONG_ERROR_REASON = "Request Too Long";
+    private static final String TOO_MANY_REQUEST_ERROR_REASON = "Too Many Requests";
     private static final String REQUEST_TOO_LONG_ERROR_MESSAGE = "Metadata request size limit reached!";
 
     @Autowired
@@ -188,13 +189,13 @@ public class CosmosStoreBulkOperations {
 
                         if (exception != null) {
                             if ((exception instanceof CosmosException) && ((CosmosException) exception).getStatusCode() == HttpStatus.SC_TOO_MANY_REQUESTS) {
-                                throw new AppException(HttpStatus.SC_TOO_MANY_REQUESTS, "Too Many Requests", "CosmosDB request limit reached!", exception);
+                                throw new AppException(HttpStatus.SC_TOO_MANY_REQUESTS, TOO_MANY_REQUEST_ERROR_REASON, "CosmosDB request limit reached!", exception);
                             } else if ((exception instanceof CosmosException) && ((CosmosException) exception).getStatusCode() == HttpStatus.SC_REQUEST_TOO_LONG) {
                                 throw new AppException(HttpStatus.SC_REQUEST_TOO_LONG, REQUEST_TOO_LONG_ERROR_REASON, REQUEST_TOO_LONG_ERROR_MESSAGE, exception);
                             }
                         } else {
                             if (statusCode == HttpStatus.SC_TOO_MANY_REQUESTS) {
-                                throw new AppException(HttpStatus.SC_TOO_MANY_REQUESTS, "Too Many Requests", "CosmosDB request limit reached!!");
+                                throw new AppException(HttpStatus.SC_TOO_MANY_REQUESTS, TOO_MANY_REQUEST_ERROR_REASON, "CosmosDB request limit reached!!");
                             }
                         }
                     }
@@ -206,7 +207,7 @@ public class CosmosStoreBulkOperations {
                 LOGGER.error("Failed to " + operation + " documents in CosmosDB.");
 
                 if (status == HttpStatus.SC_TOO_MANY_REQUESTS) {
-                    throw new AppException(HttpStatus.SC_TOO_MANY_REQUESTS, "Too Many Requests", "CosmosDB request limit reached!!!");
+                    throw new AppException(HttpStatus.SC_TOO_MANY_REQUESTS, TOO_MANY_REQUEST_ERROR_REASON, "CosmosDB request limit reached!!!");
                 } else if (status == HttpStatus.SC_REQUEST_TOO_LONG) {
                     throw new AppException(HttpStatus.SC_REQUEST_TOO_LONG, REQUEST_TOO_LONG_ERROR_REASON, REQUEST_TOO_LONG_ERROR_MESSAGE);
                 } else {
