@@ -8,6 +8,7 @@ import com.azure.cosmos.models.CosmosBulkItemResponse;
 import com.azure.cosmos.models.CosmosBulkOperationResponse;
 import com.azure.cosmos.models.CosmosItemOperation;
 import com.azure.cosmos.models.CosmosPatchOperations;
+import org.apache.http.HttpStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +19,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.opengroup.osdu.azure.logging.DependencyLogger;
 import org.opengroup.osdu.azure.logging.DependencyLoggingOptions;
+import org.opengroup.osdu.core.common.model.http.AppException;
+import org.opengroup.osdu.core.common.model.storage.RecordMetadata;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.lenient;
@@ -51,11 +55,17 @@ public class CosmosStoreBulkOperationsTest {
     @Mock
     CosmosItemOperation cosmosItemOperation;
     @Mock
+    CosmosItemOperation cosmosItemOperationForRequestTooLongException;
+    @Mock
     CosmosBulkExecutionOptions cosmosBulkExecutionOptions;
     @Mock
     CosmosBulkOperationResponse cosmosBulkOperationResponse;
     @Mock
+    CosmosBulkOperationResponse cosmosBulkOperationResponseForRequestTooLongException;
+    @Mock
     CosmosBulkItemResponse cosmosBulkItemResponse;
+    @Mock
+    CosmosBulkItemResponse cosmosBulkItemResponseForRequestTooLongException;
     @Mock
     CosmosDatabase cosmosDatabase;
     @Mock
@@ -126,6 +136,30 @@ public class CosmosStoreBulkOperationsTest {
         verify(dependencyLogger).logDependency(loggingOptionsArgumentCaptor.capture());
         DependencyLoggingOptions actualLoggingOptions = loggingOptionsArgumentCaptor.getValue();
         verifyDependencyLogging(actualLoggingOptions, "PATCH_ITEMS", "partition_key=[id1]", "cosmosdb/collection", 0.0, 200, true);
+    }
+
+    @Test
+    void should_returnRequestTooLong_when_RequestEntityTooLargeException_Is_Captured() {
+        lenient().doReturn(cosmosBulkItemResponseForRequestTooLongException).when(cosmosBulkOperationResponseForRequestTooLongException).getResponse();
+        lenient().doReturn(cosmosItemOperationForRequestTooLongException).when(cosmosBulkOperationResponseForRequestTooLongException).getOperation();
+        lenient().when(cosmosBulkItemResponseForRequestTooLongException.getStatusCode()).thenReturn(413);
+
+        List<RecordMetadata> docs = new ArrayList<>();
+        List<String> partitionKeys = new ArrayList<>();
+        RecordMetadata doc = new RecordMetadata();
+        doc.setId("id123");
+        docs.add(doc);
+        partitionKeys.add(doc.getId());
+
+        try {
+            sut.bulkInsertWithCosmosClient(DATA_PARTITION_ID, COSMOS_DB, COLLECTION, docs, partitionKeys, 1);
+        } catch (AppException ex) {
+            assertEquals( HttpStatus.SC_REQUEST_TOO_LONG, ex.getError().getCode());
+            assertEquals("Request Too Long", ((AppException) ex.getOriginalException()).getError().getReason());
+            assertEquals("Metadata request size limit reached!", ex.getOriginalException().getMessage());
+        } catch (Exception ex) {
+            fail("Should not get any other exception. Received " + ex.getClass());
+        }
     }
 
     private void verifyDependencyLogging(DependencyLoggingOptions capturedLoggingOptions, String name, String data, String target, double requestCharge, int resultCode, boolean success) {
