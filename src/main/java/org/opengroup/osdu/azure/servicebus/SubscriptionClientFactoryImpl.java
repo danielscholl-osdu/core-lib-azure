@@ -7,7 +7,9 @@ import com.microsoft.azure.servicebus.primitives.ConnectionStringBuilder;
 import com.microsoft.azure.servicebus.primitives.ServiceBusException;
 import com.microsoft.azure.servicebus.security.ManagedIdentityTokenProvider;
 import org.opengroup.osdu.azure.cache.SubscriptionClientCache;
+import org.opengroup.osdu.azure.dependencies.DefaultAzureServiceBusCredential;
 import org.opengroup.osdu.azure.di.MSIConfiguration;
+import org.opengroup.osdu.azure.di.WorkloadIdentityConfiguration;
 import org.opengroup.osdu.azure.partition.PartitionInfoAzure;
 import org.opengroup.osdu.azure.partition.PartitionServiceClient;
 import org.opengroup.osdu.common.Validators;
@@ -31,6 +33,8 @@ public class SubscriptionClientFactoryImpl implements ISubscriptionClientFactory
     @Autowired
     private MSIConfiguration msiConfiguration;
 
+    @Autowired
+    private WorkloadIdentityConfiguration workloadIdentityConfiguration;
 
     /**
      * @param dataPartitionId  Data Partition Id
@@ -83,13 +87,31 @@ public class SubscriptionClientFactoryImpl implements ISubscriptionClientFactory
     }
 
     /***
-     * @param entityPath                 Service Bus entity path
-     * @param namespace                  Service Bus namespace
-     * @return SubscriptionClient object
+     * @param entityPath  Service Bus entity path
+     * @param namespace   Service Bus namespace
+     * @return SubscriptionClient object using appropriate token provider
      * @throws InterruptedException Exception thrown by {@link SubscriptionClient}
      * @throws ServiceBusException  Exception thrown by {@link SubscriptionClient}
+     *
+     * Auth selection order:
+     * 1. Try Workload Identity first (modern K8s method)
+     * 2. Fallback to Pod Identity (legacy K8s method)
      */
     SubscriptionClient getSubscriptionClientMSI(final String entityPath, final String namespace) throws InterruptedException, ServiceBusException {
-        return new SubscriptionClient(namespace, entityPath, new ClientSettings(new ManagedIdentityTokenProvider()), ReceiveMode.PEEKLOCK);
+        if (workloadIdentityConfiguration.getIsEnabled()) {
+            return new SubscriptionClient(
+                namespace,
+                entityPath,
+                new ClientSettings(new DefaultAzureServiceBusCredential()),
+                ReceiveMode.PEEKLOCK
+            );
+        } else {
+            return new SubscriptionClient(
+                namespace,
+                entityPath,
+                new ClientSettings(new ManagedIdentityTokenProvider()),
+                ReceiveMode.PEEKLOCK
+            );
+        }
     }
 }
