@@ -19,7 +19,6 @@ import com.azure.cosmos.CosmosContainer;
 import com.azure.cosmos.CosmosException;
 import com.azure.cosmos.implementation.ConflictException;
 import com.azure.cosmos.implementation.NotFoundException;
-import com.azure.cosmos.implementation.RequestRateTooLargeException;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.CosmosQueryRequestOptions;
@@ -46,6 +45,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
+import static org.opengroup.osdu.azure.cosmosdb.CosmosStoreBulkOperations.REQUEST_TOO_LONG_ERROR_MESSAGE;
+import static org.opengroup.osdu.azure.cosmosdb.CosmosStoreBulkOperations.REQUEST_TOO_LONG_ERROR_REASON;
+import static org.opengroup.osdu.azure.cosmosdb.CosmosStoreBulkOperations.TOO_MANY_REQUEST_ERROR_MESSAGE;
+import static org.opengroup.osdu.azure.cosmosdb.CosmosStoreBulkOperations.TOO_MANY_REQUEST_ERROR_REASON;
 import static org.opengroup.osdu.azure.logging.DependencyType.COSMOS_STORE;
 
 /**
@@ -753,8 +756,11 @@ public class CosmosStore {
             CoreLoggerFactory.getInstance().getLogger(LOGGER_NAME).debug(String.format("UPSERT_ITEM with partition_key=%s", partitionKey));
         } catch (CosmosException e) {
             statusCode = e.getStatusCode();
+            if (statusCode == HttpStatus.SC_REQUEST_TOO_LONG) {
+                throw new AppException(HttpStatus.SC_REQUEST_TOO_LONG, REQUEST_TOO_LONG_ERROR_REASON, REQUEST_TOO_LONG_ERROR_MESSAGE, e);
+            }
             if (statusCode == HttpStatus.SC_TOO_MANY_REQUESTS) {
-                throw new RequestRateTooLargeException();
+                throw new AppException(HttpStatus.SC_TOO_MANY_REQUESTS, TOO_MANY_REQUEST_ERROR_REASON, TOO_MANY_REQUEST_ERROR_MESSAGE, e);
             } else {
                 String errorMessage = "Unexpectedly failed to put item into CosmosDB";
                 CoreLoggerFactory.getInstance().getLogger(LOGGER_NAME).warn(errorMessage, e);
