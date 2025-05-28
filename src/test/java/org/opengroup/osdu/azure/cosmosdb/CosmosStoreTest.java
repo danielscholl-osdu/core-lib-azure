@@ -93,6 +93,8 @@ class CosmosStoreTest {
     @Mock
     private CosmosItemResponse<TenantInfoDoc> cosmosResponse;
 
+    @Mock
+    private CosmosException cosmosException;
 
     /*
     @Mock
@@ -148,7 +150,7 @@ class CosmosStoreTest {
     @BeforeEach
     void init() throws CosmosException {
         mockSingleton(coreLoggerFactory);
-        when(coreLoggerFactory.getLogger(anyString())).thenReturn(coreLogger);
+        lenient().when(coreLoggerFactory.getLogger(anyString())).thenReturn(coreLogger);
 
         // mock the common cosmos request/response pattern that most tests need. because
         // not all tests will leverage these, we make the mocks lenient.
@@ -281,6 +283,40 @@ class CosmosStoreTest {
         verify(dependencyLogger, times(1)).logDependency(loggingOptionsArgumentCaptor.capture());
         DependencyLoggingOptions actualLoggingOptions = loggingOptionsArgumentCaptor.getValue();
         verifyDependencyLogging(actualLoggingOptions, "UPSERT_ITEM", "partition_key=some-data", "cosmosdb/collection", 0, false);
+    }
+
+    @Test
+    void upsertItem_throwsAppException_ifCosmosExceptionCode413() throws CosmosException {
+        when(cosmosException.getStatusCode()).thenReturn(413);
+        doThrow(cosmosException).when(container).upsertItem(any(), any(), any());
+
+        AppException exception = assertThrows(AppException.class, () -> {
+            cosmosStore.upsertItem(DATA_PARTITION_ID, COSMOS_DB, COLLECTION, PARTITION_KEY_SOME_DATA, any());
+        });
+        assertEquals(413, exception.getError().getCode());
+        assertEquals("Request Too Long", exception.getError().getReason());
+
+        ArgumentCaptor<DependencyLoggingOptions> loggingOptionsArgumentCaptor = ArgumentCaptor.forClass(DependencyLoggingOptions.class);
+        verify(dependencyLogger, times(1)).logDependency(loggingOptionsArgumentCaptor.capture());
+        DependencyLoggingOptions actualLoggingOptions = loggingOptionsArgumentCaptor.getValue();
+        verifyDependencyLogging(actualLoggingOptions, "UPSERT_ITEM", "partition_key=some-data", "cosmosdb/collection", 413, false);
+    }
+
+    @Test
+    void upsertItem_throwsAppException_ifCosmosExceptionCode429() throws CosmosException {
+        when(cosmosException.getStatusCode()).thenReturn(429);
+        doThrow(cosmosException).when(container).upsertItem(any(), any(), any());
+
+        AppException exception = assertThrows(AppException.class, () -> {
+            cosmosStore.upsertItem(DATA_PARTITION_ID, COSMOS_DB, COLLECTION, PARTITION_KEY_SOME_DATA, any());
+        });
+        assertEquals(429, exception.getError().getCode());
+        assertEquals("Too Many Requests", exception.getError().getReason());
+
+        ArgumentCaptor<DependencyLoggingOptions> loggingOptionsArgumentCaptor = ArgumentCaptor.forClass(DependencyLoggingOptions.class);
+        verify(dependencyLogger, times(1)).logDependency(loggingOptionsArgumentCaptor.capture());
+        DependencyLoggingOptions actualLoggingOptions = loggingOptionsArgumentCaptor.getValue();
+        verifyDependencyLogging(actualLoggingOptions, "UPSERT_ITEM", "partition_key=some-data", "cosmosdb/collection", 429, false);
     }
 
     @Test
