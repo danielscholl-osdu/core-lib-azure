@@ -96,7 +96,22 @@ public class Slf4jMDCFilter implements Filter {
         if (userId != null) {
             contextMap.put("user-id", userId);
         }
+
+        String oid = getOid();
+        if (oid != null) {
+            contextMap.put("oid", oid);
+        }
         return contextMap;
+    }
+
+    /**
+     * Get oid from Authorization payload (JWT token).
+     *
+     * @return the oid
+     */
+    private String getOid() {
+        String authorization = dpsHeaders.getAuthorization();
+        return authorization == null ? null : authUtils.getOidFromJwtToken(authorization);
     }
 
     /**

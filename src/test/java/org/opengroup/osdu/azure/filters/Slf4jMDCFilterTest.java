@@ -48,6 +48,8 @@ public class Slf4jMDCFilterTest {
     public static final String EXPECTED_APP_ID = "appId";
     public static final String EXPECTED_OPERATION_NAME = "{POST [/query]}";
     public static final String EXPECTED_USER_ID = "a@b.com";
+    public static final String OID = "oid";
+    public static final String EXPECTED_OID = "e8ca76c2-5e4d-4f7c-b8d7-8c6c6e3d4f50";
 
     @Mock
     private HttpServletRequest servletRequest;
@@ -94,6 +96,7 @@ public class Slf4jMDCFilterTest {
         when(handlerExecutionChain.getHandler()).thenReturn("handlerMethod");
         when(jwtClaimsSet.getSubject()).thenReturn(EXPECTED_USER_ID);
         when(authUtils.getClaimsFromJwtToken(any())).thenReturn(jwtClaimsSet);
+        when(authUtils.getOidFromJwtToken(any())).thenReturn(EXPECTED_OID);
 
         ArgumentCaptor<Map<String, String>> argCaptor = ArgumentCaptor.forClass(Map.class);
         try (MockedStatic<MDC> mockStatic = mockStatic(MDC.class)) {
@@ -102,13 +105,14 @@ public class Slf4jMDCFilterTest {
             verify(servletRequest, times(1)).getMethod();
             mockStatic.verify(() -> MDC.setContextMap(argCaptor.capture()));
             Map<String, String> contextMap = argCaptor.getValue();
-            assertEquals(6, contextMap.size());
+            assertEquals(7, contextMap.size());
             assertEquals(EXPECTED_OPERATION_NAME, contextMap.get(OPERATION_NAME));
             assertEquals(EXPECTED_APP_ID, contextMap.get(APP_ID));
             assertEquals(EXPECTED_CORRELATION_ID, contextMap.get(DpsHeaders.CORRELATION_ID));
             assertEquals(EXPECTED_USER_ID, contextMap.get(USER_ID));
             assertEquals(EXPECTED_METHOD, contextMap.get(API_METHOD));
             assertEquals(EXPECTED_PARTITION, contextMap.get(DpsHeaders.DATA_PARTITION_ID));
+            assertEquals(EXPECTED_OID, contextMap.get(OID));
         }
     }
 
@@ -151,6 +155,25 @@ public class Slf4jMDCFilterTest {
             assertEquals(EXPECTED_APP_ID, contextMap.get(APP_ID));
             assertEquals(EXPECTED_CORRELATION_ID, contextMap.get(DpsHeaders.CORRELATION_ID));
             assertNull(contextMap.get(USER_ID));
+            assertEquals(EXPECTED_METHOD, contextMap.get(API_METHOD));
+            assertEquals(EXPECTED_PARTITION, contextMap.get(DpsHeaders.DATA_PARTITION_ID));
+        }
+    }
+    @Test
+    public void should_skip_oid_if_oid_claim_not_present() throws Exception {
+        when(authUtils.getOidFromJwtToken(any())).thenReturn(null);
+        when(authUtils.getClaimsFromJwtToken(any())).thenReturn(jwtClaimsSet);
+        ArgumentCaptor<Map<String, String>> argCaptor = ArgumentCaptor.forClass(Map.class);
+        try (MockedStatic<MDC> mockStatic = mockStatic(MDC.class)) {
+            this.sut.doFilter(servletRequest, servletResponse, filterChain);
+            verify(servletRequest, times(1)).getMethod();
+            mockStatic.verify(() -> MDC.setContextMap(argCaptor.capture()));
+            Map<String, String> contextMap = argCaptor.getValue();
+            assertEquals(5, contextMap.size());
+            assertEquals("", contextMap.get(OPERATION_NAME));
+            assertEquals(EXPECTED_APP_ID, contextMap.get(APP_ID));
+            assertEquals(EXPECTED_CORRELATION_ID, contextMap.get(DpsHeaders.CORRELATION_ID));
+            assertNull(contextMap.get(OID));
             assertEquals(EXPECTED_METHOD, contextMap.get(API_METHOD));
             assertEquals(EXPECTED_PARTITION, contextMap.get(DpsHeaders.DATA_PARTITION_ID));
         }
