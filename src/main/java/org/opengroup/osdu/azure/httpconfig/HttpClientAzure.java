@@ -65,9 +65,10 @@ public class HttpClientAzure implements IHttpClient {
      * Decorated method to send request with circuitbreaker.
      *
      * @param httpRequest made by user class
+     * @param isIdempotent whether the request is idempotent
      * @return HttpResponse
      */
-    public HttpResponse decoratedSend(final HttpRequest httpRequest, boolean isIdempotent) {
+    public HttpResponse decoratedSend(final HttpRequest httpRequest, final boolean isIdempotent) {
         org.opengroup.osdu.core.common.model.http.HttpResponse response = null;
         try {
             response = this.urlFetchService.sendRequest(FetchServiceHttpRequest.builder()
@@ -104,10 +105,11 @@ public class HttpClientAzure implements IHttpClient {
      * calls urlfetchservice's send request after applying a circuitbreaker.
      *
      * @param httpRequest made by user class
+     * @param isIdempotent whether the request is idempotent
      * @return HttpResponse
      */
     @Override
-    public HttpResponse send(final HttpRequest httpRequest, boolean isIdempotent) {
+    public HttpResponse send(final HttpRequest httpRequest, final boolean isIdempotent) {
         if (!azureCircuitBreakerConfiguration.isEnable()) {
             // Call method without CircuitBreaker
             return this.decoratedSend(httpRequest, isIdempotent);
