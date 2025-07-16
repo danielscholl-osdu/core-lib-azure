@@ -54,7 +54,7 @@
     <springdoc-openapi-starter-webmvc-ui.version>2.8.9</springdoc-openapi-starter-webmvc-ui.version>
 
     <microsoft-graph.version>6.45.0</microsoft-graph.version>
-    <azure.appinsights.version>3.6.2</azure.appinsights.version>
+    <azure.appinsights.version>3.7.3</azure.appinsights.version>
     <azure-servicebus.version>3.6.7</azure-servicebus.version>
     <azure-eventgrid.version>1.4.0</azure-eventgrid.version>
     <azure-mgmt-eventgrid.version>1.0.0-beta-4</azure-mgmt-eventgrid.version>
