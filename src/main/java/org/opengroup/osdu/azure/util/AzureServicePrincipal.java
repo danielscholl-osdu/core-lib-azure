@@ -16,8 +16,10 @@ package org.opengroup.osdu.azure.util;
 
 import com.azure.core.credential.AccessToken;
 import com.azure.core.credential.TokenRequestContext;
-import com.azure.identity.implementation.IdentityClient;
-import com.azure.identity.implementation.IdentityClientBuilder;
+import com.azure.identity.ClientSecretCredential;
+import com.azure.identity.ClientSecretCredentialBuilder;
+import com.azure.identity.ManagedIdentityCredential;
+import com.azure.identity.ManagedIdentityCredentialBuilder;
 import com.azure.identity.WorkloadIdentityCredential;
 import com.azure.identity.WorkloadIdentityCredentialBuilder;
 
@@ -47,7 +49,7 @@ public final class AzureServicePrincipal {
      * | Feature                   | getMSIToken                              | getWIToken                              | getIdToken                               |
      * |---------------------------|------------------------------------------|------------------------------------------|-----------------------------------------|
      * | Mechanism                 | Managed Identity                        | Workload Identity                        | Service Principal (SPN)                  |
-     * | Credential Builder        | IdentityClientBuilder                   | WorkloadIdentityCredentialBuilder        | IdentityClientBuilder                    |
+     * | Credential Builder        | ManagedIdentityCredentialBuilder        | WorkloadIdentityCredentialBuilder        | ClientSecretCredentialBuilder            |
      * | Endpoint                  | IMDS (http://169.254.169.254/metadata)  | Kubernetes and Azure AD federation       | Azure AD                                 |
      * | Environment Dependency    | Azure Managed Identity-enabled resources| Kubernetes Workload Identity setup       | None (requires SPN credentials)          |
      * | Input Parameters          | None                                    | Resource ID                              | SPN ID, SPN Secret, Tenant ID, Resource  |
@@ -72,15 +74,15 @@ public final class AzureServicePrincipal {
      */
     public String getIdToken(final String sp_id, final String sp_secret, final String tenant_id, final String app_resource_id) {
         try {
-            IdentityClientBuilder identityClientBuilder = createIdentityClientBuilder();
-            IdentityClient identityClientSPN = identityClientBuilder.tenantId(tenant_id)
+            ClientSecretCredential credential = new ClientSecretCredentialBuilder()
                     .clientId(sp_id)
                     .clientSecret(sp_secret)
+                    .tenantId(tenant_id)
                     .build();
 
             TokenRequestContext requestContextSPN = new TokenRequestContext();
             requestContextSPN.addScopes(app_resource_id.concat("/.default"));
-            AccessToken tokenSpnCreds = identityClientSPN.authenticateWithConfidentialClient(requestContextSPN).block();
+            AccessToken tokenSpnCreds = credential.getToken(requestContextSPN).block();
 
             if (tokenSpnCreds != null && tokenSpnCreds.getToken() != null) {
                 return tokenSpnCreds.getToken();
@@ -98,12 +100,11 @@ public final class AzureServicePrincipal {
      */
     public String getMSIToken() {
         try {
-            IdentityClientBuilder identityClientBuilder = createIdentityClientBuilder();
-            IdentityClient identityClientMSI = identityClientBuilder.build();
+            ManagedIdentityCredential credential = new ManagedIdentityCredentialBuilder().build();
 
             TokenRequestContext requestContextMSI = new TokenRequestContext();
             requestContextMSI.addScopes(MANAGEMENT_SCOPE);
-            AccessToken tokenMsi = identityClientMSI.authenticateToIMDSEndpoint(requestContextMSI).block();
+            AccessToken tokenMsi = credential.getToken(requestContextMSI).block();
 
             if (tokenMsi != null && tokenMsi.getToken() != null) {
                 return tokenMsi.getToken();
@@ -140,15 +141,6 @@ public final class AzureServicePrincipal {
         }
     }
 
-    /**
-     * Creates a new IdentityClientBuilder instance.
-     * Protected method to allow mocking in tests.
-     *
-     * @return A new instance of IdentityClientBuilder
-     */
-    protected IdentityClientBuilder createIdentityClientBuilder() {
-        return new IdentityClientBuilder();
-    }
 
     /**
      * Creates a new WorkloadIdentityClientBuilder instance.
