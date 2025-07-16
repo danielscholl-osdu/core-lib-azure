@@ -31,3 +31,8 @@ target/
 .idea
 *.iml
 
+# AI files
+.claude/
+CLAUDE.md
+.mcp.json
+.github/copilot-instructions.md
