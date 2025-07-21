@@ -35,7 +35,7 @@ jobs:
       actions: read # Required for Claude to read CI results on PRs
     
     env:
-      GITLAB_UPSTREAM_URL: ${{ vars.GITLAB_UPSTREAM_URL }}
+      GITLAB_UPSTREAM_URL: ${{ vars.UPSTREAM_REPO_URL }}
       GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
       GITLAB_CLI_VERSION: ${{ vars.GITLAB_CLI_VERSION || '1.36.0' }}
       CLAUDE_OAUTH_TOKEN: ""
@@ -46,6 +46,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
 
       - name: Set Claude authentication variables
         id: claude_auth
@@ -87,13 +92,6 @@ jobs:
           echo "- GITLAB_UPSTREAM_URL: ${{ vars.GITLAB_UPSTREAM_URL }}"
           echo "- GITLAB_TOKEN: configured"
 
-      - name: Install GitLab CLI
-        if: contains(github.event.pull_request.labels.*.name, 'OSDU')
-        timeout-minutes: 5
-        run: |
-          curl -fsSL https://gitlab.com/gitlab-org/cli/-/releases/v${{ env.GITLAB_CLI_VERSION }}/downloads/glab_${{ env.GITLAB_CLI_VERSION }}_linux_amd64.tar.gz | tar -xzv
-          sudo mv bin/glab /usr/local/bin/
-          glab version
 
       - name: Create GitLab MR
         if: steps.claude_auth.outputs.auth_method != 'none'
@@ -104,8 +102,39 @@ jobs:
           claude_code_oauth_token: ${{ env.CLAUDE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ env.CLAUDE_API_KEY }}
           
-          # Tools to allow GitLab operations
-          allowed_tools: "Bash(glab auth *),Bash(glab mr *),Bash(glab repo *),Bash(git *)"
+          # GitLab MCP server configuration
+          mcp_config: |
+            {
+              "mcpServers": {
+                "gitlab": {
+                  "command": "npx",
+                  "args": ["-y", "@zereight/mcp-gitlab"],
+                  "env": {
+                    "GITLAB_PERSONAL_ACCESS_TOKEN": "${{ secrets.GITLAB_TOKEN }}",
+                    "GITLAB_API_URL": "https://community.opengroup.org/api/v4",
+                    "GITLAB_READ_ONLY_MODE": "false",
+                    "USE_GITLAB_WIKI": "false",
+                    "USE_MILESTONE": "false",
+                    "USE_PIPELINE": "false"
+                  }
+                }
+              }
+            }
+          
+          # Allow GitLab MCP tools for merge request creation
+          allowed_tools: |
+            mcp__gitlab__create_merge_request
+            mcp__gitlab__create_or_update_file
+            mcp__gitlab__get_file_contents
+            mcp__gitlab__create_branch
+            mcp__gitlab__get_project
+            mcp__gitlab__push_files
+            mcp__gitlab__create_note
+            mcp__gitlab__create_merge_request_note
+            Edit
+            Read
+            Bash
+            Task
 
           additional_permissions: |
             actions: read
@@ -118,30 +147,33 @@ jobs:
           
           # Direct prompt for GitLab MR creation
           direct_prompt: |
-            If you need to create a Gitlab Merge Request:
+            You have access to GitLab MCP server tools for creating merge requests.
             
-            ENVIRONMENT VARIABLES AVAILABLE:
-            - GITLAB_UPSTREAM_URL: ${{ env.GITLAB_UPSTREAM_URL }}
-            - GITLAB_TOKEN: Available for authentication (do not log token values)
+            GITLAB REPOSITORY: ${{ env.GITLAB_UPSTREAM_URL }}
+            
+            TASK: Create a GitLab merge request that mirrors this GitHub PR
+            
+            AVAILABLE GITLAB MCP TOOLS:
+            - mcp__gitlab__get_project (get project details)
+            - mcp__gitlab__create_branch (create new branch)
+            - mcp__gitlab__get_file_contents (read files)
+            - mcp__gitlab__create_or_update_file (update files)
+            - mcp__gitlab__push_files (push changes)
+            - mcp__gitlab__create_merge_request (create MR)
+            - mcp__gitlab__create_merge_request_note (add MR comments)
             
             INSTRUCTIONS:
-            1. Authenticate with GitLab using: glab auth login --hostname <gitlab-host> --token $GITLAB_TOKEN
-            2. Analyze the current GitHub PR changes and metadata
-            3. Create a new branch in the GitLab repository with the same changes
-              - The branch name should be prefixed with `ai-agent`
-            4. Create a GitLab MR with:
+            1. Get the GitLab project details using mcp__gitlab__get_project
+            2. Create a new branch with name prefixed `ai-agent-` using mcp__gitlab__create_branch
+            3. Read the changed files from this GitHub PR and push them to GitLab using mcp__gitlab__create_or_update_file
+            4. Create a GitLab MR using mcp__gitlab__create_merge_request with:
                - Same title as GitHub PR
                - Same description (adapted for GitLab format)
-               - Same file changes
-               - Labels should be added for `MR::Dependencies Upgrade`
-            5. Ensure the existing PR has a comment with the GitLab MR URL
+               - Label: `MR::Dependencies Upgrade`
+            5. Comment on this GitHub PR with the GitLab MR URL
             
-            IMPORTANT: 
-            - Use the glab CLI tool to interact with GitLab
-            - The GitLab repository URL is: ${{ env.GITLAB_UPSTREAM_URL }}
-            - Do not log any authentication tokens or sensitive information
-            
-            If there are any issues, explain what went wrong and provide troubleshooting steps.
+            Use only the GitLab MCP server tools listed above for all GitLab operations.
+            Do not log any authentication tokens or sensitive information.
 
           # Optional: Use sticky comments to make Claude reuse the same comment on subsequent pushes to the same PR
           # use_sticky_comment: true
