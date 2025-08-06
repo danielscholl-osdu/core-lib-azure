@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.1](https://github.com/danielscholl-osdu/core-lib-azure/compare/v1.0.0...v1.0.1) (2025-08-06)
+
+
+### 🔧 Miscellaneous
+
+* Sync template updates ([bb56e86](https://github.com/danielscholl-osdu/core-lib-azure/commit/bb56e86c8184a421d27aff0ad7ac8ae691288ed7))
+* Sync template updates ([843c068](https://github.com/danielscholl-osdu/core-lib-azure/commit/843c0683454f363ca13878baa46d254769c29007))
+
+
+### 🔨 Build System
+
+* **deps:** Update Spring Boot to 3.5.3 and security dependencies ([cbcf451](https://github.com/danielscholl-osdu/core-lib-azure/commit/cbcf451b4b79db4ed459dc5087bbcea169892c3d))
+
 ## 1.0.0 (2025-07-18)
 
 
