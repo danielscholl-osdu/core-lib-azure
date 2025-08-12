@@ -69,7 +69,7 @@ public class HttpClientAzure implements IHttpClient {
      * @return HttpResponse
      */
     public HttpResponse decoratedSend(final HttpRequest httpRequest, final boolean isIdempotent) {
-        CoreLoggerFactory.getInstance().getLogger(LOGGER_NAME).info("Using isIdempotent flag: {}", isIdempotent);
+        CoreLoggerFactory.getInstance().getLogger(LOGGER_NAME).debug("Using isIdempotent flag: {}", isIdempotent);
         org.opengroup.osdu.core.common.model.http.HttpResponse response = null;
         try {
             response = this.urlFetchService.sendRequest(FetchServiceHttpRequest.builder()
@@ -111,7 +111,7 @@ public class HttpClientAzure implements IHttpClient {
      */
     @Override
     public HttpResponse send(final HttpRequest httpRequest, final boolean isIdempotent) {
-        CoreLoggerFactory.getInstance().getLogger(LOGGER_NAME).info("Using isIdempotent flag: {}", isIdempotent);
+        CoreLoggerFactory.getInstance().getLogger(LOGGER_NAME).debug("Using isIdempotent flag: {}", isIdempotent);
         if (!azureCircuitBreakerConfiguration.isEnable()) {
             // Call method without CircuitBreaker
             return this.decoratedSend(httpRequest, isIdempotent);
